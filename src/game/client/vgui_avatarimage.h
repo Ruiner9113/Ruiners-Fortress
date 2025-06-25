@@ -26,6 +26,37 @@
 // size of the standard avatar icon (unless override by SetAvatarSize)
 #define DEFAULT_AVATAR_SIZE		(32)
 
+typedef struct GifFileType;
+typedef unsigned char GifByteType;
+
+//-----------------------------------------------------------------------------
+// Purpose: Simple helper for decoding GIFs
+//-----------------------------------------------------------------------------
+class CGIFHelper
+{
+public:
+	CGIFHelper( void ) : m_pImage( NULL ), m_iSelectedFrame( 0 ) {}
+	~CGIFHelper( void ) { CloseImage(); }
+
+	bool SetImage( CUtlBuffer* pData );
+	void CloseImage( void );
+
+	// iterates to the next frame, returns true if we have just looped
+	bool NextFrame( void );
+	int GetSelectedFrame( void ) const { return m_iSelectedFrame; }
+
+	// retrieve data for the current frame
+	void GetRGBA( uint8** ppOutFrameData );
+	void GetSize( int& iWidth, int& iHeight ) const;
+	bool ShouldIterateFrame( void ) const;
+
+private:
+	static int ReadData( GifFileType* pFile, GifByteType* pBuffer, int cubBuffer );
+
+	GifFileType* m_pImage;
+	int m_iSelectedFrame;
+	double m_dIterateTime;
+};
 
 //=============================================================================
 // HPE_CHANGE:
@@ -146,10 +177,13 @@ protected:
 private:
 	void UpdateAvatarImageSize();
 
+	void LoadAnimatedAvatar();
+	void LoadStaticAvatar();
+
 	void LoadAvatarImage();
 
 	Color m_Color;
-	int m_iTextureID;
+	CUtlVector< int > m_textureIDs; // animated avatars use multiple textures
 	int m_nX, m_nY;
 	int m_wide, m_tall;
 	int	m_avatarWide, m_avatarTall;
@@ -162,6 +196,9 @@ private:
 	EAvatarSize m_AvatarSize;
 	CHudTexture *m_pFriendIcon;
 	CSteamID	m_SteamID;
+
+	bool m_bAnimating;
+	CGIFHelper m_animatedImage;
 
 	//=============================================================================
 	// HPE_BEGIN:
@@ -181,8 +218,16 @@ private:
 	static bool m_sbInitializedAvatarCache;
 
 	CCallback<CAvatarImage, PersonaStateChange_t, false> m_sPersonaStateChangedCallback;
-
 	void OnPersonaStateChanged( PersonaStateChange_t *info );
+
+	CCallResult<CAvatarImage, EquippedProfileItems_t> m_sEquippedProfileItemsRequestedCallback;
+	void OnEquippedProfileItemsRequested( EquippedProfileItems_t *pInfo, bool bIOFailure );
+
+	CCallback<CAvatarImage, EquippedProfileItemsChanged_t, false> m_sEquippedProfileItemsChangedCallback;
+	void OnEquippedProfileItemsChanged( EquippedProfileItemsChanged_t *pInfo );
+
+	CCallResult<CAvatarImage, HTTPRequestCompleted_t> m_sHTTPRequestCompletedCallback;
+	void OnHTTPRequestCompleted( HTTPRequestCompleted_t *pInfo, bool bIOFailure );
 };
 
 //-----------------------------------------------------------------------------
