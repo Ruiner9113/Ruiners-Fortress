@@ -1,5 +1,5 @@
 #include "cbase.h"
-
+#include "tier0/vprof.h"
 #include "gifhelper.h"
 #include "gif_lib.h"
 

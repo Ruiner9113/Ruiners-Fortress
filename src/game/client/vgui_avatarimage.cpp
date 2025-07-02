@@ -5,6 +5,7 @@
 //=============================================================================
 
 #include "cbase.h"
+#include "tier0/vprof.h"
 #include <vgui_controls/Controls.h>
 #include <vgui_controls/Panel.h>
 #include <vgui/ISurface.h>
