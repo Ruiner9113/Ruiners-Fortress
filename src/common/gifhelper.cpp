@@ -3,6 +3,9 @@
 #include "gifhelper.h"
 #include "gif_lib.h"
 
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
 int CGIFHelper::ReadData( GifFileType* pFile, GifByteType* pBuffer, int cubBuffer )
 {
 	auto pBuf = ( CUtlBuffer* )pFile->UserData;
@@ -14,6 +17,9 @@ int CGIFHelper::ReadData( GifFileType* pFile, GifByteType* pBuffer, int cubBuffe
 	return nBytesToRead;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
 bool CGIFHelper::OpenImage( CUtlBuffer* pBuf )
 {
 	if( m_pImage )
@@ -43,6 +49,9 @@ bool CGIFHelper::OpenImage( CUtlBuffer* pBuf )
 	return true;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose:
+//-----------------------------------------------------------------------------
 void CGIFHelper::CloseImage( void )
 {
 	if( !m_pImage )
@@ -61,6 +70,10 @@ void CGIFHelper::CloseImage( void )
 	m_dIterateTime = 0.0;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Iterates the current frame index
+// Output : true - looped back to frame 0
+//-----------------------------------------------------------------------------
 bool CGIFHelper::NextFrame( void )
 {
 	if( !m_pImage )
@@ -83,6 +96,11 @@ bool CGIFHelper::NextFrame( void )
 	return m_iSelectedFrame == 0;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Gets the current frame as an RGBA buffer
+// Input  :	ppOutFrameBuffer - where should the buffer be copied to, size
+//							   needs to be iScreenWide * iScreenTall * 4
+//-----------------------------------------------------------------------------
 void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 {
 	VPROF( "CGIFHelper::GetRGBA" );
@@ -113,15 +131,16 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 		nDisposalMethod = gcb.DisposalMode;
 	}
 
-	// temporary buffer for current frame
+	// allocate buffer for current frame with prior framebuffer data for handling transparency and disposal
 	uint8* pCurFrameBuffer = ( uint8* )stackalloc( iScreenWide * iScreenTall * 4 );
 	Q_memcpy( pCurFrameBuffer, m_pPrevFrameBuffer, iScreenWide * iScreenTall * 4 );
 
 	int iPixel = 0;
 	if( pFrame->ImageDesc.Interlace )
 	{
-		const int k_rowOffsets[] = { 0, 4, 2, 1 }; // interlacing row offsets
-		const int k_rowIncrements[] = { 8, 8, 4, 2 }; // interlacing row increments
+		// https://giflib.sourceforge.net/gifstandard/GIF89a.html#interlacedimages
+		const int k_rowOffsets[] = { 0, 4, 2, 1 };
+		const int k_rowIncrements[] = { 8, 8, 4, 2 };
 
 		for( int nPass = 0; nPass < 4; nPass++ )
 		{
@@ -184,10 +203,14 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 			for( int x = iFrameLeft; x < iFrameLeft + iFrameWide && x < iScreenWide; x++ )
 			{
 				int idx = ( y * iScreenWide + x ) * 4;
-				m_pPrevFrameBuffer[ idx + 0 ] = m_pImage->SBackGroundColor;
-				m_pPrevFrameBuffer[ idx + 1 ] = m_pImage->SBackGroundColor;
-				m_pPrevFrameBuffer[ idx + 2 ] = m_pImage->SBackGroundColor;
-				m_pPrevFrameBuffer[ idx + 3 ] = 255;
+				if( m_pImage->SBackGroundColor < m_pImage->SColorMap->ColorCount )
+				{
+					GifColorType& color = m_pImage->SColorMap->Colors[ m_pImage->SBackGroundColor ];
+					m_pPrevFrameBuffer[ idx + 0 ] = color.Red;
+					m_pPrevFrameBuffer[ idx + 1 ] = color.Green;
+					m_pPrevFrameBuffer[ idx + 2 ] = color.Blue;
+					m_pPrevFrameBuffer[ idx + 3 ] = 255;
+				}
 			}
 		}
 		break;
@@ -204,6 +227,9 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 	stackfree( pCurFrameBuffer );
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Gets the size of the current frame in pixels
+//-----------------------------------------------------------------------------
 void CGIFHelper::GetFrameSize( int& iWidth, int& iHeight ) const
 {
 	if( !m_pImage )
@@ -217,6 +243,9 @@ void CGIFHelper::GetFrameSize( int& iWidth, int& iHeight ) const
 	iHeight = imageDesc.Height;
 }
 
+//-----------------------------------------------------------------------------
+// Purpose: Gets the size of the logical screen in pixels
+//-----------------------------------------------------------------------------
 void CGIFHelper::GetScreenSize( int& iWide, int& iTall ) const
 {
 	if( !m_pImage )
