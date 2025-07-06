@@ -45,6 +45,21 @@ bool CGIFHelper::OpenImage( CUtlBuffer* pBuf )
 	int iWide, iTall;
 	GetScreenSize( iWide, iTall );
 	m_pPrevFrameBuffer = new uint8[ iWide * iTall * 4 ];
+	if( m_pImage->SBackGroundColor < m_pImage->SColorMap->ColorCount )
+	{
+		GifColorType& color = m_pImage->SColorMap->Colors[ m_pImage->SBackGroundColor ];
+		for( int i = 0; i < iWide * iTall; i++ )
+		{
+			m_pPrevFrameBuffer[ i * 4 + 0 ] = color.Red;
+			m_pPrevFrameBuffer[ i * 4 + 1 ] = color.Green;
+			m_pPrevFrameBuffer[ i * 4 + 2 ] = color.Blue;
+			m_pPrevFrameBuffer[ i * 4 + 3 ] = 255;
+		}
+	}
+	else
+	{
+		Q_memset( m_pPrevFrameBuffer, 0, iWide * iTall * 4 ); // fallback to black
+	}
 
 	return true;
 }
