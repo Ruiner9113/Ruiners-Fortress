@@ -62,13 +62,11 @@ typedef struct GifFilePrivateType {
 	bool gif89;
 } GifFilePrivateType;
 
-#ifndef HAVE_REALLOCARRAY
-extern void *openbsd_reallocarray(void *optr, size_t nmemb, size_t size);
-#define reallocarray openbsd_reallocarray
-#endif
+void* GifReallocArray( void*, size_t, size_t );
+#define reallocarray GifReallocArray
 
-// copperpixel: linking the library on windows will fail without this
 #ifdef _WIN32
+// copperpixel: microsoft deprecated POSIX function name aliases
 #define fdopen _fdopen
 #define open _open
 #endif

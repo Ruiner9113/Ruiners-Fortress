@@ -422,4 +422,16 @@ void GifFreeSavedImages(GifFileType *GifFile) {
 	GifFile->SavedImages = NULL;
 }
 
+// copperpixel: simple realloc array since some systems might not have it
+void* GifReallocArray( void* pMem, size_t nNewCount, size_t nSize )
+{
+	if( nNewCount != 0 && nSize > SIZE_MAX / nNewCount )
+	{
+		// overflow
+		return NULL;
+	}
+
+	return realloc( pMem, nNewCount * nSize );
+}
+
 /* end */

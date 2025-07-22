@@ -11,7 +11,6 @@ FILE( GLOB LIB_SOURCES
     gif_err.c
     gif_font.c
     gif_hash.c
-    openbsd-reallocarray.c
 )
 
 add_library( giflib ${LIB_SOURCES} )
