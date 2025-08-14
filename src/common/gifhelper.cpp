@@ -2,6 +2,7 @@
 #include "tier0/vprof.h"
 #include "gifhelper.h"
 #include "gif_lib.h"
+#include "pixelwriter.h"
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -91,7 +92,12 @@ bool CGIFHelper::NextFrame( void )
 	GraphicsControlBlock gcb;
 	if( DGifSavedExtensionToGCB( m_pImage, m_iSelectedFrame, &gcb ) == GIF_OK )
 	{
-		m_dIterateTime = ( gcb.DelayTime * 0.01 ) + Plat_FloatTime();
+		// simulates web browsers "throttling" short time delays so
+		// gif animation speed is similar to Steam's
+		static const double k_dMinTime = .02, k_dDefaultTime = .1; // Chrome defaults
+
+		double dDelayTime = gcb.DelayTime * .01;
+		m_dIterateTime = ( dDelayTime < k_dMinTime ? k_dDefaultTime : dDelayTime ) + Plat_FloatTime();
 	}
 
 	return m_iSelectedFrame == 0;
@@ -109,18 +115,11 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 	if( !m_pImage )
 		return;
 
-	SavedImage* pFrame = &m_pImage->SavedImages[ m_iSelectedFrame ];
-
-	ColorMapObject* pColorMap = pFrame->ImageDesc.ColorMap ? pFrame->ImageDesc.ColorMap : m_pImage->SColorMap;
-	GifByteType* pRasterBits = pFrame->RasterBits;
+	GifImageDesc &imageDesc = m_pImage->SavedImages[ m_iSelectedFrame ].ImageDesc;
+	ColorMapObject *pColorMap = imageDesc.ColorMap ? imageDesc.ColorMap : m_pImage->SColorMap;
 
 	int iScreenWide, iScreenTall;
 	GetScreenSize( iScreenWide, iScreenTall );
-	int iFrameWide, iFrameTall;
-	GetFrameSize( iFrameWide, iFrameTall );
-
-	int iFrameLeft = pFrame->ImageDesc.Left;
-	int iFrameTop = pFrame->ImageDesc.Top;
 
 	int nTransparentIndex = NO_TRANSPARENT_COLOR;
 	int nDisposalMethod = DISPOSAL_UNSPECIFIED;
@@ -132,66 +131,61 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 		nDisposalMethod = gcb.DisposalMode;
 	}
 
-	// allocate buffer for current frame with prior framebuffer data for handling transparency and disposal
-	uint8* pCurFrameBuffer = ( uint8* )stackalloc( iScreenWide * iScreenTall * 4 );
+	uint8 *pCurFrameBuffer = ( uint8 * )stackalloc( iScreenWide * iScreenTall * 4 );
 	Q_memcpy( pCurFrameBuffer, m_pPrevFrameBuffer, iScreenWide * iScreenTall * 4 );
 
-	int iPixel = 0;
-	if( pFrame->ImageDesc.Interlace )
-	{
-		// https://giflib.sourceforge.net/gifstandard/GIF89a.html#interlacedimages
-		const int k_rowOffsets[] = { 0, 4, 2, 1 };
-		const int k_rowIncrements[] = { 8, 8, 4, 2 };
+	CPixelWriter pixelWriter;
+	pixelWriter.SetPixelMemory(
+		IMAGE_FORMAT_RGBA8888,
+		pCurFrameBuffer,
+		iScreenWide * 4
+	);
 
-		for( int nPass = 0; nPass < 4; nPass++ )
+	int iPixel = 0;
+	auto lambdaComputeFrame = [ & ]( int nRowOffset = 0, int nRowIncrement = 1 )
+	{
+		for ( int y = nRowOffset; y < imageDesc.Height; y += nRowIncrement )
 		{
-			for( int y = k_rowOffsets[ nPass ]; y < iFrameTall; y += k_rowIncrements[ nPass ] )
+			int iScreenY = y + imageDesc.Top;
+			if ( iScreenY >= iScreenTall ) continue;
+
+			pixelWriter.Seek( imageDesc.Left, iScreenY );
+
+			for ( int x = 0; x < imageDesc.Width; x++ )
 			{
-				if( y + iFrameTop >= iScreenTall ) continue;
-				for( int x = 0; x < iFrameWide; x++ )
+				int iScreenX = x + imageDesc.Left;
+				if ( iScreenX >= iScreenWide ) { iPixel++; pixelWriter.SkipPixels( 1 ); continue; }
+
+				GifByteType idx = m_pImage->SavedImages[ m_iSelectedFrame ].RasterBits[ iPixel++ ];
+				if ( idx < pColorMap->ColorCount && idx != nTransparentIndex )
 				{
-					if( x + iFrameLeft >= iScreenWide ) continue;
-					int iOut = ( ( y + iFrameTop ) * iScreenWide + ( x + iFrameLeft ) ) * 4;
-					GifByteType colorIndex = pRasterBits[ iPixel ];
-					if( colorIndex < pColorMap->ColorCount && colorIndex != nTransparentIndex )
-					{
-						GifColorType& color = pColorMap->Colors[ colorIndex ];
-						pCurFrameBuffer[ iOut + 0 ] = color.Red;
-						pCurFrameBuffer[ iOut + 1 ] = color.Green;
-						pCurFrameBuffer[ iOut + 2 ] = color.Blue;
-						pCurFrameBuffer[ iOut + 3 ] = 255;
-					}
-					// else retain prev frame buffer pixel data
-					iPixel++;
+					const GifColorType &color = pColorMap->Colors[ idx ];
+					pixelWriter.WritePixel( color.Red, color.Green, color.Blue, 255 );
+				}
+				else
+				{
+					pixelWriter.SkipPixels( 1 );
 				}
 			}
+		}
+	};
+	
+	if ( imageDesc.Interlace )
+	{
+		// https://giflib.sourceforge.net/gifstandard/GIF89a.html#interlacedimages
+		static const int k_rowOffsets[] = { 0, 4, 2, 1 };
+		static const int k_rowIncrements[] = { 8, 8, 4, 2 };
+
+		for ( int nPass = 0; nPass < 4; nPass++ )
+		{
+			lambdaComputeFrame( k_rowOffsets[ nPass ], k_rowIncrements[ nPass ] );
 		}
 	}
 	else
 	{
-		for( int y = 0; y < iFrameTall; y++ )
-		{
-			if( y + iFrameTop >= iScreenTall ) continue;
-			for( int x = 0; x < iFrameWide; x++ )
-			{
-				if( x + iFrameLeft >= iScreenWide ) continue;
-				int iOut = ( ( y + iFrameTop ) * iScreenWide + ( x + iFrameLeft ) ) * 4;
-				GifByteType colorIndex = pRasterBits[ iPixel ];
-				if( colorIndex < pColorMap->ColorCount && colorIndex != nTransparentIndex )
-				{
-					GifColorType& color = pColorMap->Colors[ colorIndex ];
-					pCurFrameBuffer[ iOut + 0 ] = color.Red;
-					pCurFrameBuffer[ iOut + 1 ] = color.Green;
-					pCurFrameBuffer[ iOut + 2 ] = color.Blue;
-					pCurFrameBuffer[ iOut + 3 ] = 255;
-				}
-				// else retain prev frame buffer pixel data
-				iPixel++;
-			}
-		}
+		lambdaComputeFrame();
 	}
 
-	// copy to output
 	Q_memcpy( *ppOutFrameBuffer, pCurFrameBuffer, iScreenWide * iScreenTall * 4 );
 
 	// update prev frame buffer depending on disposal method
@@ -199,18 +193,22 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 	{
 	case DISPOSE_BACKGROUND:
 	{
-		for( int y = iFrameTop; y < iFrameTop + iFrameTall && y < iScreenTall; y++ )
+		pixelWriter.SetPixelMemory(
+			IMAGE_FORMAT_RGBA8888,
+			m_pPrevFrameBuffer,
+			iScreenWide * 4
+		);
+
+		if ( m_pImage->SBackGroundColor < m_pImage->SColorMap->ColorCount )
 		{
-			for( int x = iFrameLeft; x < iFrameLeft + iFrameWide && x < iScreenWide; x++ )
+			const GifColorType &color = m_pImage->SColorMap->Colors[ m_pImage->SBackGroundColor ];
+
+			for ( int y = imageDesc.Top; y < imageDesc.Top + imageDesc.Height && y < iScreenTall; y++ )
 			{
-				int idx = ( y * iScreenWide + x ) * 4;
-				if( m_pImage->SBackGroundColor < m_pImage->SColorMap->ColorCount )
+				pixelWriter.Seek( imageDesc.Left, y );
+				for ( int x = 0; x < imageDesc.Left && ( x + imageDesc.Left ) < iScreenWide; x++ )
 				{
-					GifColorType& color = m_pImage->SColorMap->Colors[ m_pImage->SBackGroundColor ];
-					m_pPrevFrameBuffer[ idx + 0 ] = color.Red;
-					m_pPrevFrameBuffer[ idx + 1 ] = color.Green;
-					m_pPrevFrameBuffer[ idx + 2 ] = color.Blue;
-					m_pPrevFrameBuffer[ idx + 3 ] = 255;
+					pixelWriter.WritePixel( color.Red, color.Green, color.Blue, 255 );
 				}
 			}
 		}
@@ -226,22 +224,6 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 	}
 
 	stackfree( pCurFrameBuffer );
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Gets the size of the current frame in pixels
-//-----------------------------------------------------------------------------
-void CGIFHelper::GetFrameSize( int& iWidth, int& iHeight ) const
-{
-	if( !m_pImage )
-	{
-		iWidth = iHeight = 0;
-		return;
-	}
-
-	GifImageDesc& imageDesc = m_pImage->SavedImages[ m_iSelectedFrame ].ImageDesc;
-	iWidth = imageDesc.Width;
-	iHeight = imageDesc.Height;
 }
 
 //-----------------------------------------------------------------------------

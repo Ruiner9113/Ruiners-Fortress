@@ -28,7 +28,6 @@ public:
 
 	// retrieve data for the current frame
 	void GetRGBA( uint8** ppOutFrameBuffer ); // size of the out frame buffer should be iScreenWide * iScreenTall * 4
-	void GetFrameSize( int& iWide, int& iTall ) const;
 	void GetScreenSize( int& iWide, int& iTall ) const;
 
 private:
