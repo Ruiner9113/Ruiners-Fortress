@@ -394,7 +394,7 @@ void CAvatarImage::Paint( void )
 			int iWide, iTall;
 			m_pAnimatedAvatar->m_animationHelper.GetScreenSize( iWide, iTall );
 			uint8* pDest = ( uint8* )stackalloc( iWide * iTall * 4 );
-			m_pAnimatedAvatar->m_animationHelper.GetRGBA( &pDest );
+			m_pAnimatedAvatar->m_animationHelper.GetRGBA( pDest );
 
 			// bind RGBA data to the texture
 			g_pMatSystemSurface->DrawSetTextureRGBAEx2( iFrameTexID, pDest, iWide, iTall, IMAGE_FORMAT_RGBA8888, true );

@@ -27,7 +27,7 @@ public:
 	bool ShouldIterateFrame( void ) const { return m_dIterateTime < Plat_FloatTime(); }
 
 	// retrieve data for the current frame
-	void GetRGBA( uint8** ppOutFrameBuffer ); // size of the out frame buffer should be iScreenWide * iScreenTall * 4
+	void GetRGBA( uint8* pOutFrameBuffer ); // size of the out frame buffer should be iScreenWide * iScreenTall * 4
 	void GetScreenSize( int& iWide, int& iTall ) const;
 
 private:

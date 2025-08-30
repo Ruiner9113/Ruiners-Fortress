@@ -2,7 +2,6 @@
 #include "tier0/vprof.h"
 #include "gifhelper.h"
 #include "gif_lib.h"
-#include "pixelwriter.h"
 
 //-----------------------------------------------------------------------------
 // Purpose:
@@ -11,7 +10,7 @@ int CGIFHelper::ReadData( GifFileType* pFile, GifByteType* pBuffer, int cubBuffe
 {
 	auto pBuf = ( CUtlBuffer* )pFile->UserData;
 
-	int nBytesToRead = MIN( cubBuffer, pBuf->GetBytesRemaining() );
+	int nBytesToRead = Min( cubBuffer, pBuf->GetBytesRemaining() );
 	if( nBytesToRead > 0 )
 		pBuf->Get( pBuffer, nBytesToRead );
 
@@ -46,7 +45,7 @@ bool CGIFHelper::OpenImage( CUtlBuffer* pBuf )
 	int iWide, iTall;
 	GetScreenSize( iWide, iTall );
 	m_pPrevFrameBuffer = new uint8[ iWide * iTall * 4 ];
-	GetRGBA( &m_pPrevFrameBuffer );
+	GetRGBA( m_pPrevFrameBuffer );
 
 	return true;
 }
@@ -105,21 +104,25 @@ bool CGIFHelper::NextFrame( void )
 
 //-----------------------------------------------------------------------------
 // Purpose: Gets the current frame as an RGBA buffer
-// Input  :	ppOutFrameBuffer - where should the buffer be copied to, size
-//							   needs to be iScreenWide * iScreenTall * 4
+// Input  :	pOutFrameBuffer - where should the buffer be copied to, size
+//							  needs to be iScreenWide * iScreenTall * 4
 //-----------------------------------------------------------------------------
-void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
+void CGIFHelper::GetRGBA( uint8* pOutFrameBuffer )
 {
 	VPROF( "CGIFHelper::GetRGBA" );
 
 	if( !m_pImage )
 		return;
 
+	static const int k_nBytesPerPixel = 4;
+
 	GifImageDesc &imageDesc = m_pImage->SavedImages[ m_iSelectedFrame ].ImageDesc;
 	ColorMapObject *pColorMap = imageDesc.ColorMap ? imageDesc.ColorMap : m_pImage->SColorMap;
 
 	int iScreenWide, iScreenTall;
 	GetScreenSize( iScreenWide, iScreenTall );
+
+	const int nScreenStride = iScreenWide * k_nBytesPerPixel;
 
 	int nTransparentIndex = NO_TRANSPARENT_COLOR;
 	int nDisposalMethod = DISPOSAL_UNSPECIFIED;
@@ -131,41 +134,32 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 		nDisposalMethod = gcb.DisposalMode;
 	}
 
-	uint8 *pCurFrameBuffer = ( uint8 * )stackalloc( iScreenWide * iScreenTall * 4 );
-	Q_memcpy( pCurFrameBuffer, m_pPrevFrameBuffer, iScreenWide * iScreenTall * 4 );
+	Q_memcpy( pOutFrameBuffer, m_pPrevFrameBuffer, nScreenStride * iScreenTall );
 
-	CPixelWriter pixelWriter;
-	pixelWriter.SetPixelMemory(
-		IMAGE_FORMAT_RGBA8888,
-		pCurFrameBuffer,
-		iScreenWide * 4
-	);
-
-	int iPixel = 0;
 	auto lambdaComputeFrame = [ & ]( int nRowOffset = 0, int nRowIncrement = 1 )
 	{
+		int iPixel = nRowOffset * imageDesc.Width;
 		for ( int y = nRowOffset; y < imageDesc.Height; y += nRowIncrement )
 		{
-			int iScreenY = y + imageDesc.Top;
-			if ( iScreenY >= iScreenTall ) continue;
+			const int iScreenY = y + imageDesc.Top;
+			if ( iScreenY >= iScreenTall ) { iPixel += imageDesc.Width; continue; }
 
-			pixelWriter.Seek( imageDesc.Left, iScreenY );
-
-			for ( int x = 0; x < imageDesc.Width; x++ )
+			uint8 *pDest = pOutFrameBuffer + ( iScreenY * nScreenStride ) + ( imageDesc.Left * k_nBytesPerPixel );
+			for ( int x = 0; x < imageDesc.Width; x++, iPixel++ )
 			{
-				int iScreenX = x + imageDesc.Left;
-				if ( iScreenX >= iScreenWide ) { iPixel++; pixelWriter.SkipPixels( 1 ); continue; }
+				const int iScreenX = x + imageDesc.Left;
+				if ( iScreenX >= iScreenWide ) continue;
 
-				GifByteType idx = m_pImage->SavedImages[ m_iSelectedFrame ].RasterBits[ iPixel++ ];
+				GifByteType idx = m_pImage->SavedImages[ m_iSelectedFrame ].RasterBits[ iPixel ];
 				if ( idx < pColorMap->ColorCount && idx != nTransparentIndex )
 				{
 					const GifColorType &color = pColorMap->Colors[ idx ];
-					pixelWriter.WritePixel( color.Red, color.Green, color.Blue, 255 );
+					pDest[ 0 ] = color.Red;
+					pDest[ 1 ] = color.Green;
+					pDest[ 2 ] = color.Blue;
+					pDest[ 3 ] = 255;
 				}
-				else
-				{
-					pixelWriter.SkipPixels( 1 );
-				}
+				pDest += k_nBytesPerPixel;
 			}
 		}
 	};
@@ -186,44 +180,33 @@ void CGIFHelper::GetRGBA( uint8** ppOutFrameBuffer )
 		lambdaComputeFrame();
 	}
 
-	Q_memcpy( *ppOutFrameBuffer, pCurFrameBuffer, iScreenWide * iScreenTall * 4 );
-
 	// update prev frame buffer depending on disposal method
-	switch( nDisposalMethod )
+	switch ( nDisposalMethod )
 	{
 	case DISPOSE_BACKGROUND:
-	{
-		pixelWriter.SetPixelMemory(
-			IMAGE_FORMAT_RGBA8888,
-			m_pPrevFrameBuffer,
-			iScreenWide * 4
-		);
-
 		if ( m_pImage->SBackGroundColor < m_pImage->SColorMap->ColorCount )
 		{
-			const GifColorType &color = m_pImage->SColorMap->Colors[ m_pImage->SBackGroundColor ];
-
-			for ( int y = imageDesc.Top; y < imageDesc.Top + imageDesc.Height && y < iScreenTall; y++ )
+			const GifColorType &color =	m_pImage->SColorMap->Colors[ m_pImage->SBackGroundColor ];
+			const int iFillTall = Min( imageDesc.Height, iScreenTall - imageDesc.Top );
+			const int iFillWide = Min( imageDesc.Width, iScreenWide - imageDesc.Left );
+			uint32 unFillColor = ( color.Red ) | ( color.Green << 8 ) | ( color.Blue << 16 ) | ( 0xFF << 24 );
+			for ( int y = 0; y < iFillTall; ++y )
 			{
-				pixelWriter.Seek( imageDesc.Left, y );
-				for ( int x = 0; x < imageDesc.Left && ( x + imageDesc.Left ) < iScreenWide; x++ )
+				uint32 *pRow = reinterpret_cast< uint32 * >( m_pPrevFrameBuffer + ( ( y + imageDesc.Top ) * nScreenStride ) + imageDesc.Left * k_nBytesPerPixel );
+				for ( int x = 0; x < iFillWide; ++x )
 				{
-					pixelWriter.WritePixel( color.Red, color.Green, color.Blue, 255 );
+					pRow[ x ] = unFillColor;
 				}
 			}
 		}
-		break;
-	}
 	case DISPOSE_PREVIOUS:
 		break;
 	case DISPOSAL_UNSPECIFIED:
 	case DISPOSE_DO_NOT:
 	default:
-		Q_memcpy( m_pPrevFrameBuffer, pCurFrameBuffer, iScreenWide * iScreenTall * 4 );
+		Q_memcpy( m_pPrevFrameBuffer, pOutFrameBuffer, nScreenStride * iScreenTall );
 		break;
 	}
-
-	stackfree( pCurFrameBuffer );
 }
 
 //-----------------------------------------------------------------------------
