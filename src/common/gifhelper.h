@@ -21,13 +21,14 @@ public:
 	bool OpenImage( CUtlBuffer* pBuf );
 	void CloseImage( void );
 
-	// iterates to the next frame, returns true if we have just looped
-	bool NextFrame( void );
+	bool NextFrame( void ); // iterates to the next frame, returns true if we have just looped
+	int GetFrameCount( void ) const;
 	int GetSelectedFrame( void ) const { return m_iSelectedFrame; }
 	bool ShouldIterateFrame( void ) const { return m_dIterateTime < Plat_FloatTime(); }
 
 	// retrieve data for the current frame
 	void GetRGBA( uint8* pOutFrameBuffer ); // size of the out frame buffer should be iScreenWide * iScreenTall * 4
+
 	void GetScreenSize( int& iWide, int& iTall ) const;
 
 private:

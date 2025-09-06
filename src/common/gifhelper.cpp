@@ -103,6 +103,15 @@ bool CGIFHelper::NextFrame( void )
 }
 
 //-----------------------------------------------------------------------------
+// Purpose: Gets the total number of frames in the open image
+// Output : int
+//-----------------------------------------------------------------------------
+int CGIFHelper::GetFrameCount( void ) const
+{
+	return m_pImage ? m_pImage->ImageCount : 0;
+}
+
+//-----------------------------------------------------------------------------
 // Purpose: Gets the current frame as an RGBA buffer
 // Input  :	pOutFrameBuffer - where should the buffer be copied to, size
 //							  needs to be iScreenWide * iScreenTall * 4
