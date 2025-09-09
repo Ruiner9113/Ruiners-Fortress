@@ -19,7 +19,7 @@
 DECLARE_BUILD_FACTORY( CAvatarImagePanel );
 
 CUtlMap< AvatarImagePair_t, int > CAvatarImage::s_staticAvatarCache; // cache of steam id's to textureids to use for static avatars
-CUtlDict< CAvatarImage::CAnimatedAvatar * > CAvatarImage::s_animatedAvatarCache; // cache of avatar URLs to textureids to use for animated avatars
+CUtlMap< uint32, CAvatarImage::CAnimatedAvatar * > CAvatarImage::s_animatedAvatarCache; // cache of hashed avatar URLs to textureids to use for animated avatars
 bool CAvatarImage::m_sbInitializedAvatarCache = false;
 
 ConVar cl_animated_avatars( "cl_animated_avatars", "1", FCVAR_ARCHIVE, "Enable animated avatars" );
@@ -68,6 +68,7 @@ CAvatarImage::CAvatarImage( void )
 	{
 		m_sbInitializedAvatarCache = true;
 		SetDefLessFunc( s_staticAvatarCache );
+		SetDefLessFunc( s_animatedAvatarCache );
 	}
 }
 
@@ -151,6 +152,8 @@ void CAvatarImage::OnHTTPRequestCompleted( HTTPRequestCompleted_t* pInfo, bool b
 		return;
 	}
 
+	uint32 unAvatarUrl = ( uint32 )pInfo->m_ulContextValue;
+
 	CUtlBuffer buf;
 	buf.EnsureCapacity( pInfo->m_unBodySize );
 	buf.SeekPut( CUtlBuffer::SEEK_HEAD, pInfo->m_unBodySize );
@@ -164,14 +167,14 @@ void CAvatarImage::OnHTTPRequestCompleted( HTTPRequestCompleted_t* pInfo, bool b
 		return;
 	}
 
-	// initialize texture id tree; we will create the actual texture when we'll need to ( see Paint method )
+	// create texture id tree; we will lazy initialize the actual textures when it's time to draw ( see Paint method )
 	// since ->GetRGBA calls are somewhat expensive and when called on all frames at once might cause stutters
 	pAvatar->m_textureIDs.EnsureCount( pAvatar->m_animationHelper.GetFrameCount() );
 	pAvatar->m_textureIDs.FillWithValue( -1 );
-	pAvatar->m_strUrl = m_strAvatarUrl;
+	pAvatar->m_unUrlHashed = unAvatarUrl;
 
 	// cache the new avatar
-	s_animatedAvatarCache.Insert( m_strAvatarUrl, pAvatar );
+	s_animatedAvatarCache.Insert( unAvatarUrl, pAvatar );
 	m_pAnimatedAvatar = pAvatar;
 
 	SteamHTTP()->ReleaseHTTPRequest( pInfo->m_hRequest );
@@ -204,21 +207,24 @@ void CAvatarImage::LoadAnimatedAvatar()
 		return;
 	}
 
-	m_strAvatarUrl = SteamFriends()->GetProfileItemPropertyString( m_SteamID, k_ECommunityProfileItemType_AnimatedAvatar, k_ECommunityProfileItemProperty_ImageSmall );
+	const char *pszAvatarUrl = SteamFriends()->GetProfileItemPropertyString( m_SteamID, k_ECommunityProfileItemType_AnimatedAvatar, k_ECommunityProfileItemProperty_ImageSmall );
+	uint32 unAvatarUrl = MurmurHash2( pszAvatarUrl, Q_strlen( pszAvatarUrl ), 1047 /*anything will do for a seed*/ );
 
 	// See if we have this avatar cached already...
-	int iIndex = s_animatedAvatarCache.Find( m_strAvatarUrl );
+	int iIndex = s_animatedAvatarCache.Find( unAvatarUrl );
 	if ( iIndex != s_animatedAvatarCache.InvalidIndex() )
 	{
 		m_pAnimatedAvatar = s_animatedAvatarCache[ iIndex ];
 		return;
 	}
 
-	HTTPRequestHandle hRequest = SteamHTTP()->CreateHTTPRequest( k_EHTTPMethodGET, m_strAvatarUrl );
+	HTTPRequestHandle hRequest = SteamHTTP()->CreateHTTPRequest( k_EHTTPMethodGET, pszAvatarUrl );
 	if ( hRequest == INVALID_HTTPREQUEST_HANDLE )
 	{
 		return;
 	}
+
+	SteamHTTP()->SetHTTPRequestContextValue( hRequest, ( uint64 )unAvatarUrl );
 
 	SteamAPICall_t hSendCall;
 	if ( !SteamHTTP()->SendHTTPRequest( hRequest, &hSendCall ) )
@@ -487,7 +493,7 @@ void CAvatarImage::CAnimatedAvatar::Release( void )
 		}
 	}
 	m_animationHelper.CloseImage();
-	s_animatedAvatarCache.Remove( m_strUrl );
+	s_animatedAvatarCache.Remove( m_unUrlHashed );
 	delete this;
 }
 

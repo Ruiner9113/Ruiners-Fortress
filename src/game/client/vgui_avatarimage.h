@@ -154,11 +154,12 @@ private:
 	class CAnimatedAvatar
 	{
 	public:
-		CAnimatedAvatar( void ) : m_nRefCount( 0 ) {}
+		CAnimatedAvatar( void ) : m_unUrlHashed( 0 ), m_nRefCount( 0 ) {}
 
 		CGIFHelper m_animationHelper;
 		CUtlVector< int > m_textureIDs;
-		CUtlString m_strUrl;
+
+		uint32 m_unUrlHashed;
 
 	private:
 		friend class CRefCountAccessor;
@@ -184,7 +185,6 @@ private:
 	CHudTexture *m_pFriendIcon;
 	CSteamID	m_SteamID;
 
-	CUtlString m_strAvatarUrl;
 	CSmartPtr< CAnimatedAvatar > m_pAnimatedAvatar;
 
 	//=============================================================================
@@ -202,7 +202,7 @@ private:
 	//=============================================================================
 	
 	static CUtlMap< AvatarImagePair_t, int > s_staticAvatarCache;
-	static CUtlDict< CAnimatedAvatar * > s_animatedAvatarCache;
+	static CUtlMap< uint32, CAnimatedAvatar * > s_animatedAvatarCache;
 	static bool m_sbInitializedAvatarCache;
 	CCallback<CAvatarImage, PersonaStateChange_t, false> m_sPersonaStateChangedCallback;
 	void OnPersonaStateChanged( PersonaStateChange_t *info );
