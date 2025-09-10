@@ -154,6 +154,15 @@ void CAvatarImage::OnHTTPRequestCompleted( HTTPRequestCompleted_t* pInfo, bool b
 
 	uint32 unAvatarUrl = ( uint32 )pInfo->m_ulContextValue;
 
+	// see if since the time we started the request did the avatar get created
+	int iIndex = s_animatedAvatarCache.Find( unAvatarUrl );
+	if ( iIndex != s_animatedAvatarCache.InvalidIndex() )
+	{
+		m_pAnimatedAvatar = s_animatedAvatarCache[ iIndex ];
+		SteamHTTP()->ReleaseHTTPRequest( pInfo->m_hRequest );
+		return;
+	}
+
 	CUtlBuffer buf;
 	buf.EnsureCapacity( pInfo->m_unBodySize );
 	buf.SeekPut( CUtlBuffer::SEEK_HEAD, pInfo->m_unBodySize );
