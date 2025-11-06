@@ -267,6 +267,12 @@ void CTFPlayerModelPanel::HoldFirstValidItem( void )
 	FOR_EACH_VEC( m_ItemsToCarry, i )
 	{
 		CEconItemView *pItem = m_ItemsToCarry[i];
+		int iSlot = pItem->GetStaticData()->GetLoadoutSlot(m_iCurrentClassIndex);
+
+		// Skip items MISC2 slots
+		if ( iSlot == LOADOUT_POSITION_MISC2 )
+			continue;
+			
 		bool bIsTauntItem = IsTauntItem( pItem->GetStaticData(), GetTeam(), m_iCurrentClassIndex );
 		if ( !bIsTauntItem )
 		{

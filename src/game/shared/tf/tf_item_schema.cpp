@@ -943,11 +943,6 @@ bool CTFItemDefinition::BInitFromKV( KeyValues *pKVItem, CUtlVector<CUtlString> 
 	const char *pszLoadoutSlot = pKVInitValues->GetString("item_slot", "");
 	if ( *pszLoadoutSlot )
 	{
-		if ( !V_strcmp( pszLoadoutSlot, "head" ) )
-		{
-			pszLoadoutSlot = "misc";
-		}
-
 		m_iDefaultLoadoutSlot = StringFieldToInt( pszLoadoutSlot, GetItemSchema()->GetLoadoutStrings( m_eEquipType ), true );
 		SCHEMA_INIT_CHECK(
 			m_iDefaultLoadoutSlot >= 0,

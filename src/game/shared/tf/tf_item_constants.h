@@ -101,12 +101,15 @@ enum account_loadout_positions_t
 // the shorter term, we'll break compatibility in staging where no-one cares but leave public unchanged.
 	#define	LOADOUT_MAX_WEARABLES_COUNT ( 8 /* !!! -- LOADOUT_POSITION_COUNT - 3 */ )
 
+inline bool isHeadSlot( int iSlot )
+{
+	return iSlot == LOADOUT_POSITION_HEAD;
+}
+
 inline bool IsMiscSlot( int iSlot )
 {
 	return iSlot == LOADOUT_POSITION_MISC
-		|| iSlot == LOADOUT_POSITION_MISC2
-		|| iSlot == LOADOUT_POSITION_HEAD
-		;
+		|| iSlot == LOADOUT_POSITION_MISC2;
 }
 
 inline bool IsBuildingSlot( int iSlot )
@@ -132,6 +135,7 @@ inline bool IsWearableSlot( int iSlot )
 	return iSlot == LOADOUT_POSITION_HEAD
 		|| iSlot == LOADOUT_POSITION_MISC
 		|| iSlot == LOADOUT_POSITION_ACTION
+		|| isHeadSlot( iSlot )
 		|| IsMiscSlot( iSlot )
 		|| IsTauntSlot( iSlot );
 }
