@@ -4418,8 +4418,8 @@ bool CTFPlayer::ItemIsAllowed( CEconItemView *pItem )
 	int iClass = GetPlayerClass()->GetClassIndex();
 	int iSlot = pItem->GetStaticData()->GetLoadoutSlot(iClass);
 
-	// Ban misc2
-	if ( iSlot == LOADOUT_POSITION_MISC2 )
+	// Ban misc, misc2 and action slot items
+	if ( iSlot == LOADOUT_POSITION_MISC || iSlot == LOADOUT_POSITION_MISC2 || iSlot == LOADOUT_POSITION_ACTION )
 		return false;
 		
 	// Passtime hack to allow passtime gun

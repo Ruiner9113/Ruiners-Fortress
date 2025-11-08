@@ -269,8 +269,8 @@ void CTFPlayerModelPanel::HoldFirstValidItem( void )
 		CEconItemView *pItem = m_ItemsToCarry[i];
 		int iSlot = pItem->GetStaticData()->GetLoadoutSlot(m_iCurrentClassIndex);
 
-		// Skip items MISC2 slots
-		if ( iSlot == LOADOUT_POSITION_MISC2 )
+		// Skip items MISC, MISC2 and ACTION slots
+		if ( iSlot == LOADOUT_POSITION_MISC || iSlot == LOADOUT_POSITION_MISC2 || iSlot == LOADOUT_POSITION_ACTION )
 			continue;
 			
 		bool bIsTauntItem = IsTauntItem( pItem->GetStaticData(), GetTeam(), m_iCurrentClassIndex );
