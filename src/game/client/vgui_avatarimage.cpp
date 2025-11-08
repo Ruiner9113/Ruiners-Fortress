@@ -169,7 +169,7 @@ void CAvatarImage::OnHTTPRequestCompleted( HTTPRequestCompleted_t* pInfo, bool b
 	Verify( SteamHTTP()->GetHTTPResponseBodyData( pInfo->m_hRequest, ( uint8 * )buf.Base(), pInfo->m_unBodySize ) );
 
 	CAnimatedAvatar *pAvatar = new CAnimatedAvatar;
-	if ( !pAvatar->m_gif.OpenImage( buf ) )
+	if ( !pAvatar->m_gif.BOpenImage( buf ) )
 	{
 		delete pAvatar;
 		SteamHTTP()->ReleaseHTTPRequest( pInfo->m_hRequest );
@@ -377,32 +377,28 @@ void CAvatarImage::Paint( void )
 	int iTextureID = m_iStaticTextureID;
 	if ( m_pAnimatedAvatar.IsValid() && cl_animated_avatars.GetBool() )
 	{
-		bool bMarkForDeletion = false;
-		// update the frame if needed
-		if ( m_pAnimatedAvatar->m_gif.ShouldIterateFrame() && m_pAnimatedAvatar->m_gif.NextFrame() )
+		CGIFHelper &gif = m_pAnimatedAvatar->m_gif;
+		if ( gif.BIsProcessed() )
 		{
-			bMarkForDeletion = true;
-		}
+			// update the frame if needed
+			if ( gif.BShouldIterateFrame() )
+			{
+				gif.BNextFrame();
+			}
 
-		int &iFrameTexID = m_pAnimatedAvatar->m_textureIDs[ m_pAnimatedAvatar->m_gif.GetSelectedFrame() ];
-		if ( iFrameTexID == -1 )
-		{
-			// init the texture for the current frame
-			iFrameTexID = vgui::surface()->CreateNewTextureID( true );
+			int &iFrameTexID = m_pAnimatedAvatar->m_textureIDs[ gif.GetSelectedFrame() ];
+			if ( iFrameTexID == -1 )
+			{
+				// init the texture for the current frame
+				iFrameTexID = vgui::surface()->CreateNewTextureID( true );
 
-			int nWide, nTall;
-			uint8 *pubDest = ( uint8 * )stackalloc( m_pAnimatedAvatar->m_gif.FrameSize( IMAGE_FORMAT_DXT1_RUNTIME, nWide, nTall ) );
-			m_pAnimatedAvatar->m_gif.FrameData( IMAGE_FORMAT_DXT1_RUNTIME, pubDest );
+				int nWide, nTall;
+				gif.FrameSize( nWide, nTall );
 
-			// bind RGBA data to the texture
-			g_pMatSystemSurface->DrawSetTextureRGBAEx2( iFrameTexID, pubDest, nWide, nTall, IMAGE_FORMAT_DXT1_RUNTIME, true );
-		}
-		iTextureID = iFrameTexID;
-
-		if ( bMarkForDeletion )
-		{
-			// no longer need to store frame data in CGIFHelper when we copied all the frames to the textures
-			m_pAnimatedAvatar->m_gif.CloseImage( true );
+				// bind frame data to the texture
+				g_pMatSystemSurface->DrawSetTextureRGBAEx2( iFrameTexID, gif.FrameData(), nWide, nTall, IMAGE_FORMAT_DXT1_RUNTIME, true );
+			}
+			iTextureID = iFrameTexID;
 		}
 	}
 
