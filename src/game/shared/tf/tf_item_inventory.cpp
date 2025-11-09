@@ -173,6 +173,11 @@ bool AreSlotsConsideredIdentical( EEquipType_t eEquipType, int iBaseSlot, int iT
 			return IsMiscSlot( iTestSlot );
 		}
 
+		if (iBaseSlot == LOADOUT_POSITION_HEAD)
+		{
+			return IsHeadSlot( iTestSlot );
+		}
+
 		if ( iBaseSlot == LOADOUT_POSITION_BUILDING )
 		{
 			return IsBuildingSlot( iTestSlot );

@@ -295,7 +295,7 @@ bool CEconTool_StrangePart::CanApplyTo( const IEconItemInterface *pTool, const I
 
 #if defined( TF_DLL ) || defined( TF_GC_DLL ) || defined( TF_CLIENT_DLL )
 	// Strange Cosmetics can take on any part
-	if ( pSubjectItemDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_MISC )
+	if ( pSubjectItemDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_MISC || pSubjectItemDef->GetDefaultLoadoutSlot() == LOADOUT_POSITION_HEAD)
 	{
 		return true;
 	}

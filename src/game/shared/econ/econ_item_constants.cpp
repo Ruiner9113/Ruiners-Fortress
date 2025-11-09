@@ -807,7 +807,7 @@ const char* GetHalloweenOfferingInvalidReason( const IEconItemInterface *pTestIt
 	}
 
 	// If you are a taunt or a cosmetic you are allowed
-	if ( pTestItem->GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_MISC || pTestItem->GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_TAUNT )
+	if ( pTestItem->GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_MISC || pTestItem->GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_TAUNT || pTestItem->GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_HEAD )
 	{
 		// do not 'medal' equip region items
 		if ( pTestItem->GetItemDefinition()->GetEquipRegionMask() & GetItemSchema()->GetEquipRegionBitMaskByName( "medal" ) )

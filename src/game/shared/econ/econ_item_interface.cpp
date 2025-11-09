@@ -353,7 +353,7 @@ bool IEconItemInterface::IsMarketable() const
 			return true;
 
 		// Unusual Cosmetics and Taunts
-		if ( GetQuality() == AE_UNUSUAL && ( GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_MISC || GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_TAUNT ) )
+		if ( GetQuality() == AE_UNUSUAL && ( GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_MISC || GetItemDefinition()->GetLoadoutSlot( 0 ) == LOADOUT_POSITION_TAUNT || GetItemDefinition()->GetLoadoutSlot(0) == LOADOUT_POSITION_HEAD) )
 			return true;
 
 		// Strange items.  Dont just check for strange quality, actually check for a strange attribute.
