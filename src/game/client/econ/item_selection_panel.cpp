@@ -833,7 +833,11 @@ CEquippableItemsForSlotGenerator::CEquippableItemsForSlotGenerator( int iClass, 
 	}
 	else
 	{
-		if ( IsMiscSlot( iSearchSlot ) )
+		if ( IsHeadSlot( iSearchSlot ) )
+		{
+			iSearchSlot = LOADOUT_POSITION_HEAD;
+		}
+		else if ( IsMiscSlot( iSearchSlot ) )
 		{
 			iSearchSlot = LOADOUT_POSITION_MISC;
 		}

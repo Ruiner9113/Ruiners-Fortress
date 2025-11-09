@@ -330,8 +330,8 @@ bool CTFGrenadeLauncher::SendWeaponAnim( int iActivity )
 	if ( iActivity == ACT_VM_PRIMARYATTACK )
 	{
 		// If we're already playing the fire anim, let it continue. It loops.
-		if ( GetActivity() == ACT_VM_PRIMARYATTACK )
-			return true;
+		//if ( GetActivity() == ACT_VM_PRIMARYATTACK )
+		//	return true;
 
 		// Otherwise, play the start it
 		return BaseClass::SendWeaponAnim( ACT_VM_PRIMARYATTACK );
