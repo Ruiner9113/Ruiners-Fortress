@@ -5298,7 +5298,7 @@ void CTFPlayer::ValidateWearables( TFPlayerClassData_t *pData )
 				bool bLoadoutHead = iLoadoutSlot == LOADOUT_POSITION_HEAD;
 				bool bLoadoutMisc = iLoadoutSlot == LOADOUT_POSITION_MISC;
 				bool bLoadoutTaunt = iLoadoutSlot == LOADOUT_POSITION_TAUNT;
-				if ( bLoadoutMisc || bLoadoutTaunt ) 
+				if ( bLoadoutHead || bLoadoutMisc || bLoadoutTaunt ) 
 				{
 					for ( int i = LOADOUT_POSITION_INVALID + 1; i < CLASS_LOADOUT_POSITION_COUNT; i++ )
 					{
