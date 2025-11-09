@@ -380,10 +380,12 @@ void CAvatarImage::Paint( void )
 		CGIFHelper &gif = m_pAnimatedAvatar->m_gif;
 		if ( gif.BIsProcessed() )
 		{
+			bool bMarkForDeletion = false;
 			// update the frame if needed
-			if ( gif.BShouldIterateFrame() )
+			if ( gif.BShouldIterateFrame() && gif.BNextFrame() )
 			{
-				gif.BNextFrame();
+				// we can free the gif helper's copy of the texture now that matsystemsurface got all frames
+				bMarkForDeletion = true;
 			}
 
 			int &iFrameTexID = m_pAnimatedAvatar->m_textureIDs[ gif.GetSelectedFrame() ];
@@ -399,6 +401,11 @@ void CAvatarImage::Paint( void )
 				g_pMatSystemSurface->DrawSetTextureRGBAEx2( iFrameTexID, gif.FrameData(), nWide, nTall, IMAGE_FORMAT_DXT1_RUNTIME, true );
 			}
 			iTextureID = iFrameTexID;
+
+			if ( bMarkForDeletion )
+			{
+				gif.DestroyTexture();
+			}
 		}
 	}
 

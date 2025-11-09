@@ -74,14 +74,12 @@ bool CGIFHelper::BOpenImage( CUtlBuffer &bufImage )
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: Free all GIF resources
 //-----------------------------------------------------------------------------
 void CGIFHelper::CloseImage( void )
 {
-    if ( m_textureProcThread.IsAlive() )
-    {
-        m_textureProcThread.Stop();
-    }
+    DestroyTexture();
+
     if ( m_pImage )
     {
         int nError;
@@ -91,15 +89,27 @@ void CGIFHelper::CloseImage( void )
         }
         m_pImage = NULL;
     }
+
+    m_bProcessed = false;
+    m_iSelectedFrame = 0;
+    m_dIterateTime = 0.0;
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: You can call this to free texture resources if you copied the data
+//          somewhere else
+//-----------------------------------------------------------------------------
+void CGIFHelper::DestroyTexture( void )
+{
+    if ( m_textureProcThread.IsAlive() )
+    {
+        m_textureProcThread.Stop();
+    }
     if ( m_pTexture )
     {
         DestroyVTFTexture( m_pTexture );
         m_pTexture = NULL;
     }
-
-    m_bProcessed = false;
-    m_iSelectedFrame = 0;
-    m_dIterateTime = 0.0;
 }
 
 //-----------------------------------------------------------------------------

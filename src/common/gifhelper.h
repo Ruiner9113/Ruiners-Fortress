@@ -20,6 +20,8 @@ public:
 	bool BOpenImage( CUtlBuffer &bufImage );
 	void CloseImage( void );
 
+	void DestroyTexture( void );
+
 	bool BIsProcessed( void ) const { return m_bProcessed; }
 
 	bool BNextFrame( void ); // iterates to the next frame, returns true if we have just looped
