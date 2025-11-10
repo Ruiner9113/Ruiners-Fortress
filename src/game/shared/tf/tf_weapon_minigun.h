@@ -144,6 +144,9 @@ private:
 	void				UpdateBarrelMovement( void );
 	virtual void		SetDormant( bool bDormant );
 
+	virtual void		Simulate(void);
+	void				EjectBrass(void);
+
 	virtual void		ViewModelAttachmentBlending( CStudioHdr *hdr, Vector pos[], Quaternion q[], float currentTime, int boneMask );
 #endif
 
@@ -179,13 +182,7 @@ private:
 	bool	m_bAttack3Down;
 
 #ifdef CLIENT_DLL
-	void StartBrassEffect();
-	void StopBrassEffect();
-	void HandleBrassEffect();
-
-	EHANDLE				m_hEjectBrassWeapon;
-	CNewParticleEffect *m_pEjectBrassEffect;
-	int					m_iEjectBrassAttachment;
+	float			m_flEjectBrassTime;
 
 	void StartMuzzleEffect();
 	void StopMuzzleEffect();

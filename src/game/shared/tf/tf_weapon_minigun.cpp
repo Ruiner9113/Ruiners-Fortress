@@ -82,10 +82,6 @@ CTFMinigun::CTFMinigun()
 #ifdef CLIENT_DLL
 	m_pSoundCur = NULL;
 
-	m_hEjectBrassWeapon = NULL;
-	m_pEjectBrassEffect = NULL;
-	m_iEjectBrassAttachment = -1;
-
 	m_hMuzzleEffectWeapon = NULL;
 	m_pMuzzleEffect = NULL;
 	m_iMuzzleAttachment = -1;
@@ -147,6 +143,8 @@ void CTFMinigun::WeaponReset( void )
 	m_flBarrelTargetVelocity = 0.0f;
 
 #ifdef CLIENT_DLL
+	m_flEjectBrassTime = 0.0f;
+
 	if ( m_pSoundCur )
 	{
 		CSoundEnvelopeController::GetController().SoundDestroy( m_pSoundCur );
@@ -157,7 +155,6 @@ void CTFMinigun::WeaponReset( void )
 	m_flMinigunSoundCurrentPitch = 1.0f;
 
 	StopMuzzleEffect();
-	StopBrassEffect();
 #endif
 }
 
@@ -995,22 +992,7 @@ void CTFMinigun::HandleFireOnEmpty( void )
 //-----------------------------------------------------------------------------
 float CTFMinigun::GetProjectileDamage( void )
 {
-	float flDamage = BaseClass::GetProjectileDamage();
-
-	// How long have we been spun up - sans the min period required to fire
-	float flPreFireWindUp = GetWindUpDuration() - TF_MINIGUN_SPINUP_TIME;
-	float flSpinTime = Max( flPreFireWindUp, GetFiringDuration() );
-	// DevMsg( "PreFireTime: %.2f\n", flPreFireWindUp );
-
-	if ( flSpinTime < TF_MINIGUN_PENALTY_PERIOD )
-	{
-		float flMod = 1.f;
-		flMod = RemapValClamped( flSpinTime, 0.2f, TF_MINIGUN_PENALTY_PERIOD, 0.5f, 1.f );
-		flDamage *= flMod;
-		//DevMsg( "DmgMod: %.2f\n", flMod );
-	}
-	
-	return flDamage;
+	return BaseClass::GetProjectileDamage();
 }
 
 //-----------------------------------------------------------------------------
@@ -1018,23 +1000,7 @@ float CTFMinigun::GetProjectileDamage( void )
 //-----------------------------------------------------------------------------
 float CTFMinigun::GetWeaponSpread( void )
 {
-	float flSpread = BaseClass::GetWeaponSpread();
-
-	// How long have we been spun up - sans the min period required to fire
-	float flPreFireWindUp = GetWindUpDuration() - TF_MINIGUN_SPINUP_TIME;
-	float flSpinTime = Max( flPreFireWindUp, GetFiringDuration() );
-	//DevMsg( "PreFireTime: %.2f\n", flPreFireWindUp );
-
-	if ( flSpinTime < TF_MINIGUN_PENALTY_PERIOD )
-	{
-		const float flMaxSpread = 1.5f;
-		float flMod = RemapValClamped( flSpinTime, 0.f, TF_MINIGUN_PENALTY_PERIOD, flMaxSpread, 1.f );
-		//DevMsg( "SpreadMod: %.2f\n", flMod );
-
-		flSpread *= flMod;
-	}
-	
-	return flSpread;
+	return BaseClass::GetWeaponSpread();
 }
 
 
@@ -1123,8 +1089,7 @@ void CTFMinigun::UpdateBarrelMovement()
 //-----------------------------------------------------------------------------
 void CTFMinigun::OnDataChanged( DataUpdateType_t updateType )
 {
-	// Brass ejection and muzzle flash.
-	HandleBrassEffect();
+	// Muzzle flash.
 	HandleMuzzleEffect();
 
 	BaseClass::OnDataChanged( updateType );
@@ -1157,7 +1122,6 @@ void CTFMinigun::UpdateOnRemove( void )
 
 	// Force the particle system off.
 	StopMuzzleEffect();
-	StopBrassEffect();
 
 	BaseClass::UpdateOnRemove();
 }
@@ -1180,7 +1144,6 @@ void CTFMinigun::SetDormant( bool bDormant )
 		if ( !IsDormant() && bDormant && m_iWeaponState != AC_STATE_IDLE )
 		{
 			StopMuzzleEffect();
-			StopBrassEffect();
 		}
 	}
 
@@ -1199,37 +1162,48 @@ void CTFMinigun::ItemPreFrame( void )
 	BaseClass::ItemPreFrame();
 }
 
-
 //-----------------------------------------------------------------------------
-// Purpose: 
+// Purpose: Eject brass while firing
 //-----------------------------------------------------------------------------
-void CTFMinigun::StartBrassEffect()
+void CTFMinigun::Simulate()
 {
-	StopBrassEffect();
+	BaseClass::Simulate();
 
-	m_hEjectBrassWeapon = GetWeaponForEffect();
-	if ( !m_hEjectBrassWeapon )
+	if ( !IsDormant() )
+	{
+		if (m_iWeaponState == AC_STATE_FIRING && gpGlobals->curtime >= m_flEjectBrassTime)
+		{
+			m_flEjectBrassTime = gpGlobals->curtime + 0.1f;
+			EjectBrass();
+		}
+	}
+}
+//-----------------------------------------------------------------------------
+// Purpose: Since brass ejection is usually handled by anim event, we need to make our own function
+// See CTFWeaponBase::OnFireEvent and TF_EjectBrassCallback (what actually spawns the brass)
+//-----------------------------------------------------------------------------
+void CTFMinigun::EjectBrass()
+{
+	C_BaseEntity* pEffectOwner = GetWeaponForEffect();
+	int iEjectBrassAttachment = pEffectOwner->LookupAttachment("eject_brass");
+
+	if (iEjectBrassAttachment <= 0)
+
 		return;
 
-	if ( UsingViewModel() && !g_pClientMode->ShouldDrawViewModel() )
+	CEffectData data;
+	pEffectOwner->GetAttachment(iEjectBrassAttachment, data.m_vOrigin, data.m_vAngles);
+
+	data.m_nHitBox = GetWeaponID();
+	data.m_nDamageType = GetDamageType();
+
+	CTFPlayer* pPlayer = GetTFPlayerOwner();
+	if (pPlayer)
 	{
-		// Prevent effects when the ViewModel is hidden with r_drawviewmodel=0
-		return;
+		data.m_vStart = pPlayer->GetAbsVelocity();
 	}
 
-	// Try and setup the attachment point if it doesn't already exist.
-	// This caching will mess up if we go third person from first - we only do this in taunts and don't fire so we should
-	// be okay for now.
-	if ( m_iEjectBrassAttachment == -1 )
-	{
-		m_iEjectBrassAttachment = m_hEjectBrassWeapon->LookupAttachment( "eject_brass" );
-	}
-
-	// Start the brass ejection, if a system hasn't already been started.
-	if ( m_iEjectBrassAttachment > 0 && m_pEjectBrassEffect == NULL )
-	{
-		m_pEjectBrassEffect = m_hEjectBrassWeapon->ParticleProp()->Create( "eject_minigunbrass", PATTACH_POINT_FOLLOW, m_iEjectBrassAttachment );
-	}
+	DispatchEffect("TF_EjectBrass", data);
 }
 
 //-----------------------------------------------------------------------------
@@ -1267,23 +1241,6 @@ void CTFMinigun::StartMuzzleEffect()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CTFMinigun::StopBrassEffect()
-{
-	if ( !m_hEjectBrassWeapon )
-		return;
-
-	// Stop the brass ejection.
-	if ( m_pEjectBrassEffect )
-	{
-		m_hEjectBrassWeapon->ParticleProp()->StopEmission( m_pEjectBrassEffect );
-		m_hEjectBrassWeapon = NULL;
-		m_pEjectBrassEffect = NULL;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CTFMinigun::StopMuzzleEffect()
 {
 	if ( !m_hMuzzleEffectWeapon )
@@ -1295,21 +1252,6 @@ void CTFMinigun::StopMuzzleEffect()
 		m_hMuzzleEffectWeapon->ParticleProp()->StopEmission( m_pMuzzleEffect );
 		m_hMuzzleEffectWeapon = NULL;
 		m_pMuzzleEffect		  = NULL;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CTFMinigun::HandleBrassEffect()
-{
-	if ( m_iWeaponState == AC_STATE_FIRING && m_pEjectBrassEffect == NULL )
-	{
-		StartBrassEffect();
-	}
-	else if ( m_iWeaponState != AC_STATE_FIRING && m_pEjectBrassEffect )
-	{
-		StopBrassEffect();
 	}
 }
 

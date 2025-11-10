@@ -99,7 +99,7 @@ PRECACHE_WEAPON_REGISTER( tf_weapon_stickbomb );
 
 //=============================================================================
 
-#define TF_BREAKABLE_MELEE_BREAK_BODYGROUP 0
+#define TF_BREAKABLE_MELEE_BREAK_BODYGROUP 1
 // Absolute body number of broken/not-broken since the server can't figure them out from the studiohdr.  Would only
 // matter if we had other body groups going on anyway
 #define TF_BREAKABLE_MELEE_BODY_NOTBROKEN 0

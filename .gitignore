@@ -66,7 +66,10 @@ game/platform/config/ServerBrowser.vdf
 game/platform/config/InGameDialogConfig.vdf
 game/steam_appid.txt
 src/game/client/steam_appid.txt
-game/ruiners_fortress.exe
+game/ruiners_fortress_win64.exe
+game/ruiners_fortress/cfg/settings.scr
+game/ruiners_fortress/maps/graphs/itemtest.ain
+game/ruiners_fortress/serverconfig.vdf
 
 # shader files
 *.tmp
@@ -524,6 +527,3 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
-game/ruiners_fortress/cfg/settings.scr
-game/ruiners_fortress/maps/graphs/itemtest.ain
-game/ruiners_fortress/serverconfig.vdf
