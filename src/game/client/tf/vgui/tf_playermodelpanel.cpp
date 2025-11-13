@@ -268,10 +268,6 @@ void CTFPlayerModelPanel::HoldFirstValidItem( void )
 	{
 		CEconItemView *pItem = m_ItemsToCarry[i];
 		int iSlot = pItem->GetStaticData()->GetLoadoutSlot(m_iCurrentClassIndex);
-
-		// Skip items MISC, MISC2 and ACTION slots
-		if ( iSlot == LOADOUT_POSITION_MISC || iSlot == LOADOUT_POSITION_MISC2 || iSlot == LOADOUT_POSITION_ACTION )
-			continue;
 			
 		bool bIsTauntItem = IsTauntItem( pItem->GetStaticData(), GetTeam(), m_iCurrentClassIndex );
 		if ( !bIsTauntItem )
@@ -918,8 +914,9 @@ void CTFPlayerModelPanel::EquipAllWearables( CEconItemView *pHeldItem )
 	FOR_EACH_VEC( m_ItemsToCarry, i )
 	{
 		CEconItemView *pItem = m_ItemsToCarry[i];
-		// If it's a wearable item, we put it on.
-		if ( pItem->GetStaticData()->IsAWearable() )
+		// If it's a head item, we put it on.
+		int Slot = pItem->GetStaticData()->GetLoadoutSlot( m_iCurrentClassIndex );
+		if ( Slot == LOADOUT_POSITION_HEAD )
 		{
 			EquipItem( pItem );
 		}
