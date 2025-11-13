@@ -205,7 +205,7 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 
 	EHANDLE *phMoveParent = reinterpret_cast< EHANDLE * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject );
 	CBaseEntity *pMoveParent = phMoveParent ? *( phMoveParent ) : NULL;
-	BMPParticleQueryObject_t *pBMPObj = !pMoveParent ? reinterpret_cast< BMPParticleQueryObject_t * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject ) : NULL;
+	BMPParticleQueryObject_t *pBMPQueryObj = !pMoveParent ? reinterpret_cast< BMPParticleQueryObject_t * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject ) : NULL;
 
 	float flRandMax = flBBoxScale;
 	float flRandMin = 1.f - flBBoxScale;
@@ -366,10 +366,10 @@ void CParticleSystemQuery::GetRandomPointsOnControllingObjectHitBox(
 
 		s_BoneMutex.Unlock();
 	}
-	else if ( pBMPObj )
+	else if ( pBMPQueryObj )
 	{
-		const matrix3x4_t *pmatBoneToWorld = pBMPObj->m_pmatBoneToWorld;
-		const studiohdr_t *pStudioHdr = pBMPObj->m_pStudioHdr;
+		matrix3x4_t       *pmatBoneToWorld = pBMPQueryObj->m_pmatBoneToWorld;
+		const studiohdr_t *pStudioHdr = pBMPQueryObj->m_pStudioHdr;
 		if ( pStudioHdr && pmatBoneToWorld )
 		{
 			lambdaStudioGetRandomPoints( pStudioHdr, pmatBoneToWorld );
@@ -406,7 +406,7 @@ int CParticleSystemQuery::GetControllingObjectHitBoxInfo(
 
 	EHANDLE *phMoveParent = reinterpret_cast< EHANDLE * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject );
 	CBaseEntity *pMoveParent = phMoveParent ? *( phMoveParent ) : NULL;
-	BMPParticleQueryObject_t *pBMPObj = !pMoveParent ? reinterpret_cast< BMPParticleQueryObject_t * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject ) : NULL;
+	BMPParticleQueryObject_t *pBMPQueryObj = !pMoveParent ? reinterpret_cast< BMPParticleQueryObject_t * >( pParticles->m_ControlPoints[ nControlPointNumber ].m_pObject ) : NULL;
 
 	auto lambdaStudioGetHitBoxInfo = [ & ]( const studiohdr_t *pStudioHdr, const matrix3x4_t *pmatBoneToWorld, int nHitBoxSet = 0 )
 	{
@@ -452,10 +452,10 @@ int CParticleSystemQuery::GetControllingObjectHitBoxInfo(
 			nRet = 1;
 		}
 	}
-	else if ( pBMPObj )
+	else if ( pBMPQueryObj )
 	{
-		const matrix3x4_t *pmatBoneToWorld = pBMPObj->m_pmatBoneToWorld;
-		const studiohdr_t *pStudioHdr = pBMPObj->m_pStudioHdr;
+		matrix3x4_t       *pmatBoneToWorld = pBMPQueryObj->m_pmatBoneToWorld;
+		const studiohdr_t *pStudioHdr = pBMPQueryObj->m_pStudioHdr;
 		if ( pStudioHdr && pmatBoneToWorld )
 		{
 			lambdaStudioGetHitBoxInfo( pStudioHdr, pmatBoneToWorld );

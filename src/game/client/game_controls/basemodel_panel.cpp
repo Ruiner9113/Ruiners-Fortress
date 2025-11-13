@@ -774,6 +774,11 @@ void CBaseModelPanel::LookAtBounds( const Vector &vecBoundsMin, const Vector &ve
 //-----------------------------------------------------------------------------
 CBaseModelPanel::particle_data_t::~particle_data_t()
 {
+	if ( m_BMPQueryObj.m_pmatBoneToWorld )
+	{
+		delete[] m_BMPQueryObj.m_pmatBoneToWorld;
+		m_BMPQueryObj.m_pmatBoneToWorld = NULL;
+	}
 	if ( m_pParticleSystem )
 	{
 		delete m_pParticleSystem;
@@ -790,7 +795,17 @@ void CBaseModelPanel::particle_data_t::UpdateControlPoints( CStudioHdr *pStudioH
 	if ( m_pParticleSystem )
 	{
 		m_BMPQueryObj.m_pStudioHdr = pStudioHdr->GetRenderHdr();
-		m_BMPQueryObj.m_pmatBoneToWorld = m_pOuter->BoneArray( pStudioHdr );
+		// Save off bone transforms for the particle system query
+		if ( m_BMPQueryObj.m_numbones != pStudioHdr->numbones() )
+		{
+			m_BMPQueryObj.m_numbones = pStudioHdr->numbones();
+			if ( m_BMPQueryObj.m_pmatBoneToWorld )
+			{
+				delete[] m_BMPQueryObj.m_pmatBoneToWorld;
+			}
+			m_BMPQueryObj.m_pmatBoneToWorld = new matrix3x4_t[ m_BMPQueryObj.m_numbones ];
+		}
+		Q_memcpy( m_BMPQueryObj.m_pmatBoneToWorld, pWorldMatrix, m_BMPQueryObj.m_numbones * sizeof( matrix3x4_t ) );
 
 		// Update control points which is updating the position of the particles
 		matrix3x4_t matAttachToWorld;
@@ -842,7 +857,6 @@ CBaseModelPanel::particle_data_t *CBaseModelPanel::CreateParticleData( const cha
 	particle_data_t *pData = new particle_data_t;
 	pData->m_bIsUpdateToDate = false;
 	pData->m_pParticleSystem = pParticle;
-	pData->m_pOuter = this;
 
 	m_particleList.AddToTail( pData );
 

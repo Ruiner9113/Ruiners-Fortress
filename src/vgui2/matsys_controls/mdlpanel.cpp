@@ -75,8 +75,6 @@ CMDLPanel::CMDLPanel( vgui::Panel *pParent, const char *pName ) : BaseClass( pPa
 	SetIdentityMatrix( m_RootMDL.m_MDLToWorld );
 	m_RootMDL.m_pStudioHdr = NULL;
 	m_RootMDL.m_unMdlCacheSerial = 0;
-	m_RootMDL.m_nLastBoneCount = -1;
-	m_RootMDL.m_pmatLastBoneToWorld = NULL;
 	m_bDrawCollisionModel = false;
 	m_bWireFrame = false;
 	m_bGroundGrid = false;
@@ -92,11 +90,6 @@ CMDLPanel::~CMDLPanel()
 	m_aMergeMDLs.Purge();
 	m_DefaultEnvCubemap.Shutdown( );
 	m_DefaultHDREnvCubemap.Shutdown();
-	if ( m_RootMDL.m_pmatLastBoneToWorld )
-	{
-		delete[] m_RootMDL.m_pmatLastBoneToWorld;
-		m_RootMDL.m_pmatLastBoneToWorld = NULL;
-	}
 	if ( m_RootMDL.m_pStudioHdr )
 	{
 		delete m_RootMDL.m_pStudioHdr;
@@ -174,13 +167,6 @@ void CMDLPanel::SetMDL( MDLHandle_t handle, void *pProxyData )
 	m_RootMDL.m_MDL.m_vecViewTarget.Init( 100.0f, 0.0f, vecMaxs.z );
 
 	m_RootMDL.m_flCycleStartTime = 0.f;
-
-	m_RootMDL.m_nLastBoneCount = -1;
-	if ( m_RootMDL.m_pmatLastBoneToWorld )
-	{
-		delete[] m_RootMDL.m_pmatLastBoneToWorld;
-		m_RootMDL.m_pmatLastBoneToWorld = NULL;
-	}
 
 	// Set the pose parameters to the default for the mdl
 	SetPoseParameters( NULL, 0 );
@@ -487,18 +473,6 @@ void CMDLPanel::OnPaint3D()
 
 	pOverrideMaterial = NULL;
 
-	// Cache root bone transforms for external access
-	if ( m_RootMDL.m_nLastBoneCount != studioHdr.numbones() )
-	{
-		m_RootMDL.m_nLastBoneCount = studioHdr.numbones();
-		if ( m_RootMDL.m_pmatLastBoneToWorld )
-		{
-			delete[] m_RootMDL.m_pmatLastBoneToWorld;
-		}
-		m_RootMDL.m_pmatLastBoneToWorld = new matrix3x4_t[ m_RootMDL.m_nLastBoneCount ];
-	}
-	Q_memcpy( m_RootMDL.m_pmatLastBoneToWorld, pBoneToWorld, m_RootMDL.m_nLastBoneCount * sizeof( matrix3x4_t ) );
-
 	// Draw the merge MDLs.
 	matrix3x4_t matMergeBoneToWorld[MAXSTUDIOBONES];
 	int nMergeCount = m_aMergeMDLs.Count();
@@ -526,18 +500,6 @@ void CMDLPanel::OnPaint3D()
 
 			if ( pOverrideMaterial != NULL )
 				g_pStudioRender->ForcedMaterialOverride( NULL );
-
-			// Cache merge bone transforms for external access
-			if ( m_aMergeMDLs[iMerge].m_nLastBoneCount != mergeHdr.numbones() )
-			{
-				m_aMergeMDLs[iMerge].m_nLastBoneCount = mergeHdr.numbones();
-				if ( m_aMergeMDLs[iMerge].m_pmatLastBoneToWorld )
-				{
-					delete[] m_aMergeMDLs[iMerge].m_pmatLastBoneToWorld;
-				}
-				m_aMergeMDLs[iMerge].m_pmatLastBoneToWorld = new matrix3x4_t[ m_aMergeMDLs[iMerge].m_nLastBoneCount ];
-			}
-			Q_memcpy( m_aMergeMDLs[iMerge].m_pmatLastBoneToWorld, pMergeBoneToWorld, m_aMergeMDLs[iMerge].m_nLastBoneCount * sizeof( matrix3x4_t ) );
 
 			// Notify of model render
 			RenderingMergedModel( pRenderContext, &mergeHdr, m_aMergeMDLs[iMerge].m_MDL.GetMDL(), pMergeBoneToWorld );
@@ -894,9 +856,6 @@ void CMDLPanel::SetMergeMDL( MDLHandle_t handle, void *pProxyData, int nSkin /*=
 
 	m_aMergeMDLs[iIndex].m_pStudioHdr = new CStudioHdr( m_aMergeMDLs[iIndex].m_MDL.GetStudioHdr(), g_pMDLCache );
 
-	m_aMergeMDLs[iIndex].m_nLastBoneCount = -1;
-	m_aMergeMDLs[iIndex].m_pmatLastBoneToWorld = NULL;
-
 	// Need to invalidate the layout so the panel will adjust is LookAt for the new model.
 	InvalidateLayout();
 }
@@ -991,16 +950,12 @@ void CMDLPanel::ClearMergeMDLs( void )
 	const int nMergeCount = m_aMergeMDLs.Count();
 	for ( int iMerge = 0; iMerge < nMergeCount; ++iMerge )
 	{
-		if ( m_aMergeMDLs[iMerge].m_pmatLastBoneToWorld )
+		if ( !m_aMergeMDLs[iMerge].m_pStudioHdr )
 		{
-			delete[] m_aMergeMDLs[iMerge].m_pmatLastBoneToWorld;
-			m_aMergeMDLs[iMerge].m_pmatLastBoneToWorld = NULL;
+			continue;
 		}
-		if ( m_aMergeMDLs[iMerge].m_pStudioHdr )
-		{
-			delete m_aMergeMDLs[iMerge].m_pStudioHdr;
-			m_aMergeMDLs[iMerge].m_pStudioHdr = NULL;
-		}
+		delete m_aMergeMDLs[iMerge].m_pStudioHdr;
+		m_aMergeMDLs[iMerge].m_pStudioHdr = NULL;
 	}
 
 	m_aMergeMDLs.Purge();
@@ -1025,26 +980,4 @@ void CMDLPanel::ValidateMDLs()
 			m_aMergeMDLs[iMerge].m_unMdlCacheSerial = uMdlCacheSerial;
 		}
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Gets last bone to world matrices
-//-----------------------------------------------------------------------------
-const matrix3x4_t *CMDLPanel::BoneArray( CStudioHdr *pStudioHdr )
-{
-	if ( pStudioHdr == m_RootMDL.m_pStudioHdr )
-	{
-		return m_RootMDL.m_pmatLastBoneToWorld;
-	}
-
-	int cMerge = m_aMergeMDLs.Count();
-	for ( int iMerge = 0; iMerge < cMerge; ++iMerge )
-	{
-		if ( pStudioHdr == m_aMergeMDLs[ iMerge ].m_pStudioHdr )
-		{
-			return m_aMergeMDLs[ iMerge ].m_pmatLastBoneToWorld;
-		}
-	}
-
-	return NULL;
 }

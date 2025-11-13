@@ -17,11 +17,13 @@
 struct BMPParticleQueryObject_t
 {
 	const studiohdr_t *m_pStudioHdr;
-	const matrix3x4_t *m_pmatBoneToWorld;
+	int                m_numbones;
+	matrix3x4_t       *m_pmatBoneToWorld;
 
 	BMPParticleQueryObject_t( void )
 	{
 		m_pStudioHdr = NULL;
+		m_numbones = -1;
 		m_pmatBoneToWorld = NULL;
 	}
 };
@@ -259,11 +261,10 @@ protected:
 	{
 		~particle_data_t();
 
-		void UpdateControlPoints( CStudioHdr *pStudioHdr, matrix3x4_t *pWorldMatrix, const CUtlVector< int > &vecAttachments, int iDefaultBone = 0, const Vector &vecParticleOffset = vec3_origin );
+		void UpdateControlPoints( CStudioHdr *pStudioHdr, matrix3x4_t *pWorldMatrix, const CUtlVector< int >& vecAttachments, int iDefaultBone = 0, const Vector& vecParticleOffset = vec3_origin );
 
-		bool                     m_bIsUpdateToDate;
-		CParticleCollection     *m_pParticleSystem;
-		CBaseModelPanel         *m_pOuter;
+		bool				m_bIsUpdateToDate;
+		CParticleCollection	*m_pParticleSystem;
 		BMPParticleQueryObject_t m_BMPQueryObj;
 	};
 	CUtlVector< particle_data_t* > m_particleList;
