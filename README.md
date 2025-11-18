@@ -10,9 +10,10 @@ My own personal TF2 mod, mostly readding old models, some reverts and planning t
 
 - **TF Archived** Discord server: Sharing the files of old tf2.
 
+- **JustALurker**: Provided help with viewmodels reverts
+
+- **Liney** from Gamebanana: provided the pistol and shotgun models.
 
 ## License
 
 The SDK is licensed to users on a non-commercial basis under the [SOURCE 1 SDK LICENSE](LICENSE), which is contained in the [LICENSE](LICENSE) file in the root of the repository.
-
-For more information, see [Distributing your Mod](#markdown-header-distributing-your-mod).
