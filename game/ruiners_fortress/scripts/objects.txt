@@ -21,7 +21,7 @@ objects
 		IconActive			obj_sentrygun
 		IconInactive		obj_sentrygun
 		IconMenu		hud_menu_sentry_build
-		UseItemInfo		0
+		UseItemInfo		1
 		Viewmodel			"models/weapons/v_models/v_toolbox_engineer.mdl"
 		Playermodel			"models/weapons/w_models/w_toolbox.mdl"
 		DisplayPriority		4
@@ -53,7 +53,7 @@ objects
 		IconActive			obj_dispenser
 		IconInactive		obj_dispenser
 		IconMenu		hud_menu_dispenser_build
-		UseItemInfo		0
+		UseItemInfo		1
 		Viewmodel			"models/weapons/v_models/v_toolbox_engineer.mdl"
 		Playermodel			"models/weapons/w_models/w_toolbox.mdl"
 		DisplayPriority		3
@@ -86,7 +86,7 @@ objects
 		IconInactive		obj_teleporter_entrance
 		IconMenu		hud_menu_tele_entrance_build
 		SolidToPlayerMovement	1
-		UseItemInfo		0
+		UseItemInfo		1
 		Viewmodel			"models/weapons/v_models/v_toolbox_engineer.mdl"
 		Playermodel			"models/weapons/w_models/w_toolbox.mdl"
 		DisplayPriority		2

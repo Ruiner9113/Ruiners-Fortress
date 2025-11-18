@@ -759,7 +759,7 @@ public:
 
 	CNetworkVar( float, m_flObservedCritChance );
 
-	virtual bool CanInspect() const { return true; }
+	virtual bool CanInspect() const { return false; }
 	void HandleInspect();
 	
 	virtual void HookAttributes( void ) {};

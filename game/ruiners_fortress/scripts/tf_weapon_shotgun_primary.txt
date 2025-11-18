@@ -6,6 +6,7 @@ WeaponData
 	"weight"			"3"
 	"WeaponType"			"primary"
 	"ITEM_FLAG_NOITEMPICKUP" 	"1"
+	"HasTeamSkins_Viewmodel"		"1"
 	
 	// Primary Attributes
 	"Damage"			"6"
